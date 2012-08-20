@@ -7,9 +7,8 @@
   (let [id  (:db/id entity)
         kvs (seq (dissoc entity :db/id))
         relation-type (-> kvs ffirst namespace keyword)]
-    (reduce (fn [coll ins]
-              (apply conj coll ins))
-            [relation-type :db/id id] 
+    (map (fn [ins]
+              (apply conj [relation-type :db/id id] ins))            
             (reduce (fn [acc [k v]]
                       (cons [(keyword (name k)) v] acc))
                     []
@@ -22,6 +21,8 @@
    {:db/id 1
     :employee/name "Bob"
     :employee/position :boss})
+
+  ;;=> ([:employee :db/id 1 :name "Bob"] [:employee :db/id 1 :position :boss])
 )
 
 (comment
