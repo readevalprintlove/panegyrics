@@ -12,19 +12,15 @@
 ;;
 ;;  straszheimjeffrey (gmail)
 ;;  Created 2 Feburary 2009
-
+;;  Converted to Clojure1.4 by Martin Trojer 2012.
 
 (ns bacwn.datalog.impl.rules
   (:use bacwn.datalog.impl.util)
   (:use bacwn.datalog.impl.literals
         bacwn.datalog.impl.database)
-  (:use [clojure.set :only (union intersection difference)])
-  (:import java.io.Writer))
+  (:use [clojure.set :only (union intersection difference subset?)]))
 
-
-(defstruct datalog-rule
-  :head
-  :body)
+(defrecord DatalogRule [head body])
 
 (defn display-rule
   "Return the rule in a readable format."
@@ -38,8 +34,8 @@
   [query]
   (list* '?- (display-literal query)))
 
-
-;;; Check rule safety
+;; =============================
+;; Check rule safety
 
 (defn is-safe?
   "Is the rule safe according to the datalog protocol?"
@@ -50,29 +46,29 @@
         ehv (difference hv bpv)
         env (difference bnv bpv)]
     (when-not (empty? ehv)
-      (throwf "Head vars %s not bound in body in rule %s" ehv rule))
+      (throw (Exception. (str "Head vars" ehv "not bound in body of rule" rule))))
     (when-not (empty? env)
-      (throwf "Body vars %s not bound in negative positions in rule %s" env rule))
+      (throw (Exception. (str "Body vars" env "not bound in negative positions of rule" rule))))
     rule))
 
-
-;;; Rule creation and printing
+;; =============================
+;; Rule creation and printing
 
 (defn build-rule
   [hd bd]
-  (with-meta (struct datalog-rule hd bd) {:type ::datalog-rule}))
+  (with-meta (->DatalogRule hd bd) {:type ::datalog-rule}))
 
 (defmacro <-
   "Build a datalog rule.  Like this:
 
    (<- (:head :x ?x :y ?y) (:body-1 :x ?x :y ?y) (:body-2 :z ?z) (not! :body-3 :x ?x) (if > ?y ?z))"
   [hd & body]
-  (let [head (build-atom hd :bacwn.datalog.impl.literals/literal)
+  (let [head (build-atom hd :datalog.literals/literal)
         body (map build-literal body)]
     `(is-safe? (build-rule ~head [~@body]))))
 
 (defmethod print-method ::datalog-rule
-  [rule #^Writer writer]
+  [rule ^java.io.Writer writer]
   (print-method (display-rule rule) writer))
 
 (defn return-rule-data
@@ -83,16 +79,15 @@
 (defmacro ?-
   "Define a datalog query"
   [& q]
-  (let [qq (build-atom q :bacwn.datalog.impl.literals/literal)]
-  `(with-meta ~qq {:type ::datalog-query})))
+  (let [qq (build-atom q :datalog.literals/literal)]
+    `(with-meta ~qq {:type ::datalog-query})))
 
 (defmethod print-method ::datalog-query
-  [query #^Writer writer]
+  [query ^java.io.Writer writer]
   (print-method (display-query query) writer))
 
-
-
-;;; SIP
+;; =============================
+;; SIP
 
 (defn compute-sip
   "Given a set of bound column names, return an adorned sip for this
@@ -120,24 +115,24 @@
                (conj sip (adorn next bound-vars)))
         (build-rule new-h (concat sip body))))))
 
-
-;;; Rule sets
+;; =============================
+;; Rule sets
 
 (defn make-rules-set
   "Given an existing set of rules, make it a 'rules-set' for
    printing."
   [rs]
   (with-meta rs {:type ::datalog-rules-set}))
-    
+
 (def empty-rules-set (make-rules-set #{}))
 
 (defn rules-set
   "Given a collection of rules return a rules set"
   [& rules]
   (reduce conj empty-rules-set rules))
-  
+
 (defmethod print-method ::datalog-rules-set
-  [rules #^Writer writer]
+  [rules ^java.io.Writer writer]
   (binding [*out* writer]
     (do
       (print "(rules-set")
@@ -173,8 +168,8 @@
                      nil))]
     (remove nil? (map non-base rs))))
 
-
-;;; Database operations
+;; =============================
+;; Database operations
 
 (def empty-bindings [{}])
 
@@ -201,6 +196,3 @@
   [db rs]
   (reduce (fn [rdb rule]
             (apply-rule db rdb rule)) db rs))
-
-
-;; End of file

@@ -12,7 +12,7 @@
 ;;
 ;;  straszheimjeffrey (gmail)
 ;;  Created 23 June 2009
-
+;;  Converted to Clojure1.4 by Martin Trojer 2012.
 
 (ns 
   #^{:author "Jeffrey Straszheim",
@@ -20,18 +20,16 @@
   bacwn.datalog.impl.graph
   (use [clojure.set :only (union)]))
 
-
-(defstruct directed-graph
-  :nodes       ; The nodes of the graph, a collection
-  :neighbors)  ; A function that, given a node returns a collection
-               ; neighbor nodes.
+(defrecord DirectedGraph
+    [nodes       ; The nodes of the graph, a collection
+     neighbors]) ; A function that, given a node returns a collection neighbor nodes.
 
 (defn get-neighbors
   "Get the neighbors of a node."
   [g n]
   ((:neighbors g) n))
 
-
+;; =============================
 ;; Graph Modification
 
 (defn reverse-graph
@@ -44,25 +42,25 @@
                         (assoc m val (conj (get m val #{}) idx)))]
                (reduce am rna ns)))
         rn (reduce op {} (:nodes g))]
-    (struct directed-graph (:nodes g) rn)))
+    (->DirectedGraph (:nodes g) rn)))
 
 (defn add-loops
   "For each node n, add the edge n->n if not already present."
   [g]
-  (struct directed-graph
-          (:nodes g)
-          (into {} (map (fn [n]
-                          [n (conj (set (get-neighbors g n)) n)]) (:nodes g)))))
+  (->DirectedGraph
+   (:nodes g)
+   (into {} (map (fn [n]
+                   [n (conj (set (get-neighbors g n)) n)]) (:nodes g)))))
 
 (defn remove-loops
   "For each node n, remove any edges n->n."
   [g]
-  (struct directed-graph
-          (:nodes g)
-          (into {} (map (fn [n]
-                          [n (disj (set (get-neighbors g n)) n)]) (:nodes g)))))
+  (->DirectedGraph
+   (:nodes g)
+   (into {} (map (fn [n]
+                   [n (disj (set (get-neighbors g n)) n)]) (:nodes g)))))
 
-
+;; =============================
 ;; Graph Walk
 
 (defn lazy-walk
@@ -90,11 +88,11 @@
   (let [nns (fn [n]
               [n (delay (lazy-walk g (get-neighbors g n) #{}))])
         nbs (into {} (map nns (:nodes g)))]
-    (struct directed-graph
-            (:nodes g)
-            (fn [n] (force (nbs n))))))
-          
-                
+    (->DirectedGraph
+     (:nodes g)
+     (fn [n] (force (nbs n))))))
+
+;; =============================
 ;; Strongly Connected Components
 
 (defn- post-ordered-visit
@@ -106,7 +104,7 @@
                             [(conj visited n) acc]
                             (get-neighbors g n))]
       [v2 (conj acc2 n)])))
-  
+
 (defn post-ordered-nodes
   "Return a sequence of indexes of a post-ordered walk of the graph."
   [g]
@@ -146,7 +144,7 @@
                                   nbs3 (apply union nbs2)]
                               (set (map find-node-set nbs3))))
            nm (into {} (map (fn [ns] [ns (find-neighbors ns)]) sccs))]
-       (struct directed-graph (set sccs) nm))))
+       (->DirectedGraph (set sccs) nm))))
 
 (defn recursive-component?
   "Is the component (recieved from scc) self recursive?"
@@ -160,8 +158,8 @@
    self-recursive."
   [g]
   (filter (partial recursive-component? g) (scc g)))
-                          
 
+;; =============================
 ;; Dependency Lists
 
 (defn fixed-point
@@ -177,7 +175,7 @@
                    new-data
                    (recur new-data (and idx (dec idx))))))]
     (step data max)))
-                  
+
 (defn- fold-into-sets
   [priorities]
   (let [max (inc (apply max 0 (vals priorities)))
@@ -186,7 +184,7 @@
     (reduce step
             (vec (replicate max #{}))
             priorities)))
-            
+
 (defn dependency-list
   "Similar to a topological sort, this returns a vector of sets. The
    set of nodes at index 0 are independent.  The set at index 1 depend
@@ -203,7 +201,7 @@
                             (inc (count (:nodes g)))
                             =)]
     (fold-into-sets counts)))
-    
+
 (defn stratification-list
   "Similar to dependency-list (see doc), except two graphs are
    provided.  The first is as dependency-list.  The second (which may
@@ -223,6 +221,3 @@
                             (inc (count (:nodes g1)))
                             =)]
     (fold-into-sets counts)))
-
-
-;; End of file

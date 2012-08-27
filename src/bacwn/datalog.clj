@@ -12,27 +12,24 @@
 ;;
 ;;  straszheimjeffrey (gmail)
 ;;  Created 2 March 2009
-
+;;  Converted to Clojure1.4 by Martin Trojer 2012.
 
 ;;; Please see the example.clj file in the datalog folder
-
 
 (ns 
   #^{:author "Jeffrey Straszheim",
      :doc "A Clojure implementation of Datalog"} 
   bacwn.datalog
   (:use bacwn.datalog.impl.rules
-        bacwn.datalog.impl.util
         bacwn.datalog.impl.softstrat
         bacwn.datalog.impl.database)
   (:use [clojure.set :only (intersection)]))
 
-
-(defstruct work-plan
-  :work-plan        ; The underlying structure
-  :rules            ; The original rules
-  :query            ; The original query
-  :work-plan-type)  ; The type of plan
+(defrecord WorkPlan
+  [work-plan        ; The underlying structure
+   rules            ; The original rules
+   query            ; The original query
+   work-plan-type]) ; The type of plan
 
 (defn- validate-work-plan
   "Ensure any top level semantics are not violated"
@@ -41,18 +38,13 @@
     (when (-> common-relations
               empty?
               not)
-      (throwf "The rules and database define the same relation(s): %s" common-relations))))
-  ; More will follow
+      (throw (Exception. (str "The rules and database define the same relation(s):" common-relations))))))
 
 (defn build-work-plan
   "Given a list of rules and a query, build a work plan that can be
    used to execute the query."
   [rules query]
-  (struct-map work-plan
-    :work-plan (build-soft-strat-work-plan rules query)
-    :rules rules
-    :query query
-    :work-plan-type ::soft-stratified))
+  (->WorkPlan (build-soft-strat-work-plan rules query) rules query ::soft-stratified))
 
 (defn run-work-plan
   "Given a work plan, a database, and some query bindings, run the
@@ -60,6 +52,3 @@
   [work-plan database query-bindings]
   (validate-work-plan work-plan database)
   (evaluate-soft-work-set (:work-plan work-plan) database query-bindings))
-
-
-;; End of file
