@@ -1,24 +1,32 @@
-(ns bacwn.datalwg)
+(ns bacwn.datalwg
+  (:use [bacwn.datalog.impl.database :only (make-database add-tuples)]))
 
 (defn explode
   "Convert a map into a clj-Datalog tuple vector. Brittle, but
    works along the happy path."
   [entity]
-  (let [id  (:db/id entity)
-        kvs (seq (dissoc entity :db/id))
-        relation-type (-> kvs ffirst namespace keyword)]
-    (map (fn [ins]
-              (apply conj [relation-type :db/id id] ins))            
+  (let [relation-type (-> entity seq ffirst namespace keyword)
+        id-key (keyword (name relation-type) "db.id")
+        id  (get entity id-key)
+        kvs (seq (dissoc entity id-key))]
+    (vec
+     (apply concat [relation-type id-key id]
             (reduce (fn [acc [k v]]
                       (cons [(keyword (name k)) v] acc))
                     []
-                    kvs))))
+                    kvs)))))
 
+(defmacro facts [db & tuples]
+  `(add-tuples ~db
+    ~@(map explode tuples)))
 
 (comment
+  (macroexpand '(facts nil
+                       {:employee/db.id 1 :employee/name "Bob" :employee/position :boss}
+                       {:employee/db.id 1 :employee/name "Henry" :employee/position :nug}))
 
   (explode
-   {:db/id 1
+   {:employee/db.id 1
     :employee/name "Bob"
     :employee/position :boss})
 

@@ -76,7 +76,8 @@
 
 (def rules
   (rules-set
-   (<- (:works-for :employee ?x :boss ?y) (:boss :employee-id ?e-id :boss-id ?b-id)
+   (<- (:works-for :employee ?x :boss ?y)
+       (:boss :employee-id ?e-id :boss-id ?b-id)
        (:employee :id ?e-id :name ?x)
        (:employee :id ?b-id :name ?y))
    (<- (:works-for :employee ?x :boss ?y) (:works-for :employee ?x :boss ?z)

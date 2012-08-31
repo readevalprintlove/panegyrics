@@ -63,7 +63,7 @@
 
    (<- (:head :x ?x :y ?y) (:body-1 :x ?x :y ?y) (:body-2 :z ?z) (not! :body-3 :x ?x) (if > ?y ?z))"
   [hd & body]
-  (let [head (build-atom hd :datalog.literals/literal)
+  (let [head (build-atom hd :bacwn.datalog.impl.literals/literal)
         body (map build-literal body)]
     `(is-safe? (build-rule ~head [~@body]))))
 
@@ -79,7 +79,7 @@
 (defmacro ?-
   "Define a datalog query"
   [& q]
-  (let [qq (build-atom q :datalog.literals/literal)]
+  (let [qq (build-atom q :bacwn.datalog.impl.literals/literal)]
     `(with-meta ~qq {:type ::datalog-query})))
 
 (defmethod print-method ::datalog-query
