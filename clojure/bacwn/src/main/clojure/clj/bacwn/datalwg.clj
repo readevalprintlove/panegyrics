@@ -26,3 +26,43 @@
    (build-work-plan rules query)
    db
    bindings))
+
+;; printing
+
+(defmethod print-method :bacwn.datalog.impl.database/datalog-database
+  [db ^java.io.Writer writer]
+  (binding [*out* writer]
+    (do
+      (println "(datalog-database")
+      (println "{")
+      (doseq [key (keys db)]
+        (println)
+        (println key)
+        (print-method (db key) writer))
+      (println "})"))))
+
+(defmethod print-method :bacwn.datalog.impl.database/datalog-relation
+  [rel ^java.io.Writer writer]
+  (binding [*out* writer]
+    (do
+      (println "(datalog-relation")
+      (println " ;; Schema")
+      (println " " (:schema rel))
+      (println)
+      (println " ;; Data")
+      (println " #{")
+      (doseq [tuple (:data rel)]
+        (println "  " tuple))
+      (println " }")
+      (println)
+      (println " ;; Indexes")
+      (println "  {")
+      (doseq [key (-> rel :indexes keys)]
+        (println "  " key)
+        (println "    {")
+        (doseq [val (keys ((:indexes rel) key))]
+          (println "      " val)
+          (println "        " (get-in rel [:indexes key val])))
+        (println "    }"))
+      (println "  })"))))
+
