@@ -12,6 +12,8 @@
 ;;
 ;;  straszheimjeffrey (gmail)
 ;;  Created 3 Feburary 2009
+;;  Ported to ClojureScript by Fogus 2012.
+;;
 
 
 (ns bacwn.datalog.impl.util)
@@ -62,7 +64,7 @@
 
 
 ;;; Preduce -- A parallel reduce over hashes
-  
+
 (defn preduce
   "Similar to merge-with, but the contents of each key are merged in
    parallel using f.
@@ -72,19 +74,9 @@
   [f data]
   (let [data-1 (map (fn [h] (map-values #(list %) h)) data)
         merged (doall (apply merge-with concat data-1))
-        ; Groups w/ multiple elements are identified for parallel processing
+                                        ; Groups w/ multiple elements are identified for parallel processing
         [complex simple] (separate (fn [[key vals]] (> (count vals) 1)) merged)
         fold-group (fn [[key vals]] {key (reduce f vals)})
         fix-single (fn [[key [val]]] [key val])]
     (apply merge (concat (pmap fold-group merged) (map fix-single simple)))))
-  
 
-;;; Debuging and Tracing
-
-(def ^:dynamic *trace-datalog* nil)
-
-(defmacro trace-datalog
-  "If *test-datalog* is set to true, run the enclosed commands"
-  [& body]
-  `(when *trace-datalog*
-     ~@body))
