@@ -13,10 +13,12 @@
 ;;  straszheimjeffrey (gmail)
 ;;  Created 21 Feburary 2009
 ;;  Converted to Clojure1.4 by Martin Trojer 2012.
+;;  Converted to ClojureScript by Fogus 2012.
+;;
 
 (ns bacwn.datalog.impl.database
-  (:use bacwn.datalog.impl.util)
-  (:use [clojure.set :only (union intersection difference)]))
+  (:require [bacwn.datalog.impl.util :as util]
+            clojure.set))
 
 (defrecord Relation
     [schema                    ; A set of key names
@@ -25,48 +27,11 @@
 
 ;;; DDL
 
-(defmethod print-method ::datalog-database
-  [db ^java.io.Writer writer]
-   (binding [*out* writer]
-     (do
-       (println "(datalog-database")
-       (println "{")
-       (doseq [key (keys db)]
-         (println)
-         (println key)
-         (print-method (db key) writer))
-       (println "})"))))
-
 (defn datalog-database
   [rels]
   (with-meta rels {:type ::datalog-database}))
 
 (def empty-database (datalog-database {}))
-
-(defmethod print-method ::datalog-relation
-  [rel ^java.io.Writer writer]
-  (binding [*out* writer]
-    (do
-      (println "(datalog-relation")
-      (println " ;; Schema")
-      (println " " (:schema rel))
-      (println)
-      (println " ;; Data")
-      (println " #{")
-      (doseq [tuple (:data rel)]
-        (println "  " tuple))
-      (println " }")
-      (println)
-      (println " ;; Indexes")
-      (println "  {")
-      (doseq [key (-> rel :indexes keys)]
-        (println "  " key)
-        (println "    {")
-        (doseq [val (keys ((:indexes rel) key))]
-          (println "      " val)
-          (println "        " (get-in rel [:indexes key val])))
-        (println "    }"))
-      (println "  })"))))
 
 (defn datalog-relation
   "Creates a relation"
@@ -100,27 +65,6 @@
               db1
               indexes))))
 
-(defmacro make-database
-  "Makes a database, like this
-   (make-database
-     (relation :fred [:mary :sue])
-     (index :fred :mary)
-     (relation :sally [:jen :becky])
-     (index :sally :jen)
-     (index :sally :becky))"
-  [& commands]
-  (let [wrapper (fn [cur new]
-                  (let [cmd (first new)
-                        body (next new)]
-                    (assert (= 2 (count body)))
-                    (cond
-                     (= cmd 'relation)
-                     `(add-relation ~cur ~(first body) ~(fnext body))
-                     (= cmd 'index)
-                     `(add-index ~cur ~(first body) ~(fnext body))
-                     :otherwise (throw (Exception. (str new "not recognized"))))))]
-    (reduce wrapper `empty-database commands)))
-
 (defn get-relation
   "Get a relation object by name"
   [db rel-name]
@@ -136,7 +80,7 @@
 (defn database-counts
   "Returns a map with the count of elements in each relation."
   [db]
-  (map-values #(-> % :data count) db))
+  (util/map-values #(-> % :data count) db))
 
 (defn- modify-indexes
   "Perform f on the indexed tuple-set.  f should take a set and tuple,
@@ -230,11 +174,7 @@
         idxs (find-indexes (:indexes rel) pt)
         space (if (empty? idxs)
                 (:data rel) ; table scan :(
-                (reduce intersection idxs))]
-    (trace-datalog (when (empty? idxs)
-                     (println (format "Table scan of %s: %s rows!!!!!"
-                                      rn
-                                      (count space)))))
+                (reduce clojure.set/intersection idxs))]
     (fun #(match? % pt) space)))
 
 (defn select
@@ -254,7 +194,7 @@
 
 (defn merge-indexes
   [idx1 idx2]
-  (merge-with (fn [h1 h2] (merge-with union h1 h2)) idx1 idx2))
+  (merge-with (fn [h1 h2] (merge-with clojure.set/union h1 h2)) idx1 idx2))
 
 (defn merge-relations
   "Merges two relations"
@@ -262,8 +202,8 @@
   (assert (= (:schema r1) (:schema r2)))
   (let [merged-indexes (merge-indexes (:indexes r1)
                                       (:indexes r2))
-        merged-data (union (:data r1)
-                           (:data r2))]
+        merged-data (clojure.set/union (:data r1)
+                                       (:data r2))]
     (assoc r1 :data merged-data :indexes merged-indexes)))
 
 (defn database-merge
@@ -274,4 +214,5 @@
 (defn database-merge-parallel
   "Merges databases together in parallel"
   [dbs]
-  (preduce merge-relations dbs))
+  (util/preduce merge-relations dbs))
+
