@@ -15,10 +15,10 @@
 ;;  Converted to Clojure1.4 by Martin Trojer 2012.
 
 (ns bacwn.datalog.impl.rules
-  (:use bacwn.datalog.impl.util)
-  (:use bacwn.datalog.impl.literals
-        bacwn.datalog.impl.database)
-  (:use [clojure.set :only (union intersection difference subset?)]))
+  (:require [bacwn.datalog.impl.util :as util]
+            [bacwn.datalog.impl.literals :as literal]
+            [bacwn.datalog.impl.database :as db]
+            clojure.set))
 
 (defrecord DatalogRule [head body])
 
@@ -26,13 +26,13 @@
   "Return the rule in a readable format."
   [rule]
   (list* '<-
-         (-> rule :head display-literal)
-         (map display-literal (:body rule))))
+         (-> rule :head literal/display-literal)
+         (map literal/display-literal (:body rule))))
 
 (defn display-query
   "Return a query in a readable format."
   [query]
-  (list* '?- (display-literal query)))
+  (list* '?- (literal/display-literal query)))
 
 ;; =============================
 ;; Check rule safety
@@ -40,11 +40,11 @@
 (defn is-safe?
   "Is the rule safe according to the datalog protocol?"
   [rule]
-  (let [hv (literal-vars (:head rule))
-        bpv (apply union (map positive-vars (:body rule)))
-        bnv (apply union (map negative-vars (:body rule)))
-        ehv (difference hv bpv)
-        env (difference bnv bpv)]
+  (let [hv (literal/literal-vars (:head rule))
+        bpv (apply clojure.set/union (map literal/positive-vars (:body rule)))
+        bnv (apply clojure.set/union (map literal/negative-vars (:body rule)))
+        ehv (clojure.set/difference hv bpv)
+        env (clojure.set/difference bnv bpv)]
     (when-not (empty? ehv)
       (throw (Exception. (str "Head vars" ehv "not bound in body of rule" rule))))
     (when-not (empty? env)
@@ -81,21 +81,21 @@
   [bindings i-preds rule]
   (let [next-lit (fn [bv body]
                    (or (first (drop-while
-                               #(not (literal-appropriate? bv %))
+                               #(not (literal/literal-appropriate? bv %))
                                body))
-                       (first (drop-while (complement positive?) body))))
+                       (first (drop-while (complement literal/positive?) body))))
         adorn (fn [lit bvs]
-                (if (i-preds (literal-predicate lit))
-                  (let [bnds (union (get-cs-from-vs lit bvs)
-                                    (get-self-bound-cs lit))]
-                    (adorned-literal lit bnds))
+                (if (i-preds (literal/literal-predicate lit))
+                  (let [bnds (clojure.set/union (literal/get-cs-from-vs lit bvs)
+                                                (literal/get-self-bound-cs lit))]
+                    (literal/adorned-literal lit bnds))
                   lit))
-        new-h (adorned-literal (:head rule) bindings)]
-    (loop [bound-vars (get-vs-from-cs (:head rule) bindings)
+        new-h (literal/adorned-literal (:head rule) bindings)]
+    (loop [bound-vars (literal/get-vs-from-cs (:head rule) bindings)
            body (:body rule)
            sip []]
       (if-let [next (next-lit bound-vars body)]
-        (recur (union bound-vars (literal-vars next))
+        (recur (clojure.set/union bound-vars (literal/literal-vars next))
                (remove #(= % next) body)
                (conj sip (adorn next bound-vars)))
         (build-rule new-h (concat sip body))))))
@@ -132,7 +132,7 @@
    Each value will be a set of rules."
   [rs]
   (let [add-rule (fn [m r]
-                   (let [pred (-> r :head literal-predicate)
+                   (let [pred (-> r :head literal/literal-predicate)
                          os (get m pred #{})]
                      (assoc m pred (conj os r))))]
     (reduce add-rule {} rs)))
@@ -140,7 +140,7 @@
 (defn all-predicates
   "Given a rules-set, return all defined predicates"
   [rs]
-  (set (map literal-predicate (map :head rs))))
+  (set (map literal/literal-predicate (map :head rs))))
 
 (defn non-base-rules
   "Return a collection of rules that depend, somehow, on other rules"
@@ -148,7 +148,7 @@
   (let [pred (all-predicates rs)
         non-base (fn [r]
                    (if (some #(pred %)
-                             (map literal-predicate (:body r)))
+                             (map literal/literal-predicate (:body r)))
                      r
                      nil))]
     (remove nil? (map non-base rs))))
@@ -163,19 +163,12 @@
    relation in db-2.  The relation will be created if needed."
   ([db rule] (apply-rule db db rule))
   ([db-1 db-2 rule]
-     (trace-datalog (println)
-                    (println)
-                    (println "--------------- Begin Rule ---------------")
-                    (println rule))
      (let [head (:head rule)
            body (:body rule)
            step (fn [bs lit]
-                  (trace-datalog (println bs)
-                                 (println lit))
-                  (join-literal db-1 lit bs))
+                  (literal/join-literal db-1 lit bs))
            bs (reduce step empty-bindings body)]
-       (do (trace-datalog (println bs))
-           (project-literal db-2 head bs)))))
+       (literal/project-literal db-2 head bs))))
 
 (defn apply-rules-set
   [db rs]
