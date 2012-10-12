@@ -18,7 +18,8 @@
   (:use clojure.test
         bacwn.datalog.impl.rules
         bacwn.datalog.impl.literals
-        bacwn.datalog.impl.database))
+        bacwn.datalog.impl.database
+        bacwn.datalog.macros))
 
 
 (def tr-1 (<- (:fred :x ?x :y ?y) (:mary :x ?x :z ?z) (:sally :z ?z :y ?y)))

@@ -19,7 +19,8 @@
         bacwn.datalog.impl.magic
         bacwn.datalog.impl.rules
         bacwn.datalog.impl.database
-        bacwn.datalog.impl.util)
+        bacwn.datalog.impl.util
+        bacwn.datalog.macros)
   (:require clojure.set))
 
 

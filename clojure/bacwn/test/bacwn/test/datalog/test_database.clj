@@ -16,7 +16,8 @@
 
 (ns bacwn.test.datalog.test-database
   (:use clojure.test
-	bacwn.datalog.impl.database))
+	bacwn.datalog.impl.database
+        bacwn.datalog.macros))
 
 
 (def test-db

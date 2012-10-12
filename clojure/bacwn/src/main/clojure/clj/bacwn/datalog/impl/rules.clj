@@ -58,15 +58,6 @@
   [hd bd]
   (with-meta (->DatalogRule hd bd) {:type ::datalog-rule}))
 
-(defmacro <-
-  "Build a datalog rule.  Like this:
-
-   (<- (:head :x ?x :y ?y) (:body-1 :x ?x :y ?y) (:body-2 :z ?z) (not! :body-3 :x ?x) (if > ?y ?z))"
-  [hd & body]
-  (let [head (build-atom hd :bacwn.datalog.impl.literals/literal)
-        body (map build-literal body)]
-    `(is-safe? (build-rule ~head [~@body]))))
-
 (defmethod print-method ::datalog-rule
   [rule ^java.io.Writer writer]
   (print-method (display-rule rule) writer))
@@ -75,12 +66,6 @@
   "Returns an untypted rule that will be fully printed"
   [rule]
   (with-meta rule {}))
-
-(defmacro ?-
-  "Define a datalog query"
-  [& q]
-  (let [qq (build-atom q :bacwn.datalog.impl.literals/literal)]
-    `(with-meta ~qq {:type ::datalog-query})))
 
 (defmethod print-method ::datalog-query
   [query ^java.io.Writer writer]

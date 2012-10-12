@@ -16,7 +16,8 @@
 (ns bacwn.test.datalog.test-magic
   (:use clojure.test)
   (:use bacwn.datalog.impl.magic
-        bacwn.datalog.impl.rules))
+        bacwn.datalog.impl.rules
+        bacwn.datalog.macros))
 
 
 

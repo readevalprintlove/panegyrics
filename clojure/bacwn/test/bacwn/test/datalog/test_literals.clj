@@ -17,7 +17,8 @@
 (ns bacwn.test.datalog.test-literals
   (:use clojure.test)
   (:use bacwn.datalog.impl.literals
-        bacwn.datalog.impl.database))
+        bacwn.datalog.impl.database
+        bacwn.datalog.macros))
 
 
 (def pl (eval (build-literal '(:fred :x ?x :y ?y :z 3))))
