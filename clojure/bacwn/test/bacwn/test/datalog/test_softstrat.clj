@@ -19,7 +19,8 @@
         bacwn.datalog.impl.magic
         bacwn.datalog.impl.rules
         bacwn.datalog.impl.database
-        bacwn.datalog.impl.util))
+        bacwn.datalog.impl.util)
+  (:require clojure.set))
 
 
 
@@ -36,13 +37,13 @@
         q (:query ws)]
     (is (= q (?- {:pred :p :bound #{:x}} :x 1)))
     (is (= (count soft) 4))
-    (is (subset? (rules-set
-                  (<- ({:pred :q :bound #{:x}} :x ?x) ({:pred :q :magic true :bound #{:x}} :x ?x)
-                                                      (:d :x ?x))
+    (is (clojure.set/subset? (rules-set
+                              (<- ({:pred :q :bound #{:x}} :x ?x) ({:pred :q :magic true :bound #{:x}} :x ?x)
+                                  (:d :x ?x))
 
-                  (<- ({:pred :q :magic true :bound #{:x}} :x ?x) ({:pred :p :magic true :bound #{:x}} :x ?x)
-                                                                  (:b :z ?z :y ?y :x ?x)))
-                 (nth soft 0)))
+                              (<- ({:pred :q :magic true :bound #{:x}} :x ?x) ({:pred :p :magic true :bound #{:x}} :x ?x)
+                                  (:b :z ?z :y ?y :x ?x)))
+                             (nth soft 0)))
     (is (= (nth soft 1)
            (rules-set
             (<- ({:pred :q :magic true :bound #{:x}} :x ?y) ({:pred :p :magic true :bound #{:x}} :x ?x)

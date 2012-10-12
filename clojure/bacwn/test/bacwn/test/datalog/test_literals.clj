@@ -116,12 +116,12 @@
          :fred)))
 
 (deftest test-magic-literal
-  (is (= (magic-literal pl)
-         {:predicate {:pred :fred :magic true}, :term-bindings {}, :literal-type :bacwn.datalog.impl.literals/literal}))
-  (is (= (magic-literal (adorned-literal pl #{:x}))
-         {:predicate {:pred :fred :magic true :bound #{:x}},
-          :term-bindings {:x '?x},
-          :literal-type :bacwn.datalog.impl.literals/literal})))
+  (is (.equals (magic-literal pl)
+               {:predicate {:pred :fred :magic true}, :term-bindings {}, :literal-type :bacwn.datalog.impl.literals/literal}))
+  (is (.equals (magic-literal (adorned-literal pl #{:x}))
+               {:predicate {:pred :fred :magic true :bound #{:x}},
+                :term-bindings {:x '?x},
+                :literal-type :bacwn.datalog.impl.literals/literal})))
 
 (comment
   (use 'clojure.contrib.stacktrace) (e)

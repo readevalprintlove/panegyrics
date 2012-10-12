@@ -8,5 +8,6 @@
                "1.3" [[org.clojure/clojure "1.3.0"]]
                "1.4" [[org.clojure/clojure "1.4.0"]]
                "1.5" [[org.clojure/clojure "1.5.0-master-SNAPSHOT"]]}
-  :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"})
+  :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}
+  :source-paths ["src/main/clojure/clj"])
 
