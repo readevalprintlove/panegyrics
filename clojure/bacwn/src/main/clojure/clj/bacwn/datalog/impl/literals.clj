@@ -13,11 +13,13 @@
 ;;  straszheimjeffrey (gmail)
 ;;  Created 25 Feburary 2009
 ;;  Converted to Clojure1.4 by Martin Trojer 2012.
+;;  Converted to ClojureScript by Fogus 2012.
+;;
 
 (ns bacwn.datalog.impl.literals
-  (:use bacwn.datalog.impl.util)
-  (:use bacwn.datalog.impl.database)
-  (:use [clojure.set :only (intersection subset?)]))
+  (:require [bacwn.datalog.impl.util :as util]
+            [bacwn.datalog.impl.database :as db]
+            clojure.set))
 
 ;; =============================
 ;; Type Definitions
@@ -76,11 +78,11 @@
 
 (defmethod literal-vars ::literal
   [l]
-  (set (filter is-var? (-> l :term-bindings vals))))
+  (set (filter util/is-var? (-> l :term-bindings vals))))
 
 (defmethod literal-vars ::conditional
   [l]
-  (set (filter is-var? (:terms l))))
+  (set (filter util/is-var? (:terms l))))
 
 (defmethod positive-vars ::literal
   [l]
@@ -132,7 +134,7 @@
    atom."
   [f type]
   (let [p (first f)
-        ts (map #(if (is-var? %) `(quote ~%) %) (next f))
+        ts (map #(if (util/is-var? %) `(quote ~%) %) (next f))
         b (if (seq ts) (apply assoc {} ts) nil)]
     `(->AtomicLiteral ~p ~b ~type)))
 
@@ -187,7 +189,7 @@
 
 (defmethod get-vs-from-cs ::literal
   [l bound]
-  (set (filter is-var?
+  (set (filter util/is-var?
                (vals (select-keys (:term-bindings l)
                                   bound)))))
 
@@ -203,7 +205,7 @@
   [l bound]
   (reduce conj
           #{}
-          (remove nil? 
+          (remove nil?
                   (map (fn [[k v]] (if (bound v) k nil))
                        (:term-bindings l)))))
 
@@ -220,7 +222,7 @@
   (reduce conj
           #{}
           (remove nil?
-                  (map (fn [[k v]] (if (not (is-var? v)) k nil))
+                  (map (fn [[k v]] (if (not (util/is-var? v)) k nil))
                        (:term-bindings l)))))
 
 (defmethod get-self-bound-cs ::conditional
@@ -234,15 +236,15 @@
 
 (defmethod literal-appropriate? ::literal
   [bound l]
-  (not (empty? (intersection (literal-vars l) bound))))
+  (not (empty? (clojure.set/intersection (literal-vars l) bound))))
 
 (defmethod literal-appropriate? ::negated
   [bound l]
-  (subset? (literal-vars l) bound))
+  (clojure.set/subset? (literal-vars l) bound))
 
 (defmethod literal-appropriate? ::conditional
   [bound l]
-  (subset? (literal-vars l) bound))
+  (clojure.set/subset? (literal-vars l) bound))
 
 (defmulti adorned-literal
   "When passed a set of bound columns, returns the adorned literal"
@@ -251,7 +253,7 @@
 (defmethod adorned-literal ::literal
   [l bound]
   (let [pred (literal-predicate l)
-        bnds (intersection (literal-columns l) bound)]
+        bnds (clojure.set/intersection (literal-columns l) bound)]
     (if (empty? bound)
       l
       (assoc l :predicate {:pred pred :bound bnds}))))
@@ -297,7 +299,7 @@
    its bound constants to new variables."
   [s]
   (assert (-> s :literal-type (isa? ::literal)))
-  (let [ntbs (map-values (fn [_] (gensym '?_gen_)) (:term-bindings s))]
+  (let [ntbs (util/map-values (fn [_] (gensym '?_gen_)) (:term-bindings s))]
     (assoc s :term-bindings ntbs)))
 
 ;; =============================
@@ -316,14 +318,14 @@
         pred (if (map? pred*) pred* {:pred pred*})]
     (assoc l :predicate (assoc pred :delta true))))
 
-;; =============================        
+;; =============================
 ;; Database operations
 
 (defn- build-partial-tuple
   [lit binds]
   (let [tbs (:term-bindings lit)
         each (fn [[key val :as pair]]
-               (if (is-var? val)
+               (if (util/is-var? val)
                  (if-let [n (binds val)]
                    [key n]
                    nil)
@@ -335,7 +337,7 @@
    bindings."
   [lit tuple]
   (let [step (fn [binds [key val]]
-               (if (and (is-var? val)
+               (if (and (util/is-var? val)
                         (contains? tuple key))
                  (assoc binds val (tuple key))
                  binds))]
@@ -359,12 +361,12 @@
   (join-literal* db lit bs (fn [binds pt]
                              (map #(merge binds %)
                                   (map (partial project-onto-literal lit)
-                                       (select db (literal-predicate lit) pt))))))
+                                       (db/select db (literal-predicate lit) pt))))))
 
 (defmethod join-literal ::negated
   [db lit bs]
   (join-literal* db lit bs (fn [binds pt]
-                             (if (any-match? db (literal-predicate lit) pt)
+                             (if (db/any-match? db (literal-predicate lit) pt)
                                nil
                                [binds]))))
 
@@ -372,7 +374,7 @@
   [db lit bs]
   (let [each (fn [binds]
                (let [resolve (fn [term]
-                               (if (is-var? term)
+                               (if (util/is-var? term)
                                  (binds term)
                                  term))
                      args (map resolve (:terms lit))]
@@ -384,19 +386,20 @@
 (defn project-literal
   "Project a stream of bindings onto a literal/relation. Returns a new
    db."
-  ([db lit bs] (project-literal db lit bs is-var?))
+  ([db lit bs] (project-literal db lit bs util/is-var?))
   ([db lit bs var?]
      (assert (= (:literal-type lit) ::literal))
      (let [rel-name (literal-predicate lit)
            columns (-> lit :term-bindings keys)
            idxs (vec (get-adorned-bindings (literal-predicate lit)))
-           db1 (ensure-relation db rel-name columns idxs)
-           rel (get-relation db1 rel-name)
+           db1 (db/ensure-relation db rel-name columns idxs)
+           rel (db/get-relation db1 rel-name)
            step (fn [rel bindings]
                   (let [step (fn [t [k v]]
                                (if (var? v)
                                  (assoc t k (bindings v))
                                  (assoc t k v)))
                         tuple (reduce step {} (:term-bindings lit))]
-                    (add-tuple rel tuple)))]
-       (replace-relation db rel-name (reduce step rel bs)))))
+                    (db/add-tuple rel tuple)))]
+       (db/replace-relation db rel-name (reduce step rel bs)))))
+
