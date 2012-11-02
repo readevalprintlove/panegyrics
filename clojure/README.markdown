@@ -1,0 +1,1 @@
+Clojure studies coming soon
