@@ -1,0 +1,64 @@
+This is a distribution of a program called "3col"; its purpose is
+to convert text to PostScript, with particular emphasis on being
+able to pack a lot of text onto each page.
+
+If that's not what you wanted, perhaps you downloaded the wrong file. :-)
+
+In slightly more detail: By default, 3col produces output for A4 paper
+in landscape orientation, consisting of 3 columns of 100 93-character
+lines each, in 5-point Courier condensed to 90% of its default width.
+
+But if you'd prefer output for "legal" paper in portrait orientation,
+in two columns of whatever width that produces when you print in 4.8-point
+<some other monospaced font>, expanded to 112% of its default width, with
+line numbers in the margin every 20 lines, wider separating lines between
+the columns, and slightly wider line spacing, you can have it. You can
+even make that the standard for all users at your site without having to
+recompile.
+
+3col also has facilities for some basic markup (bold-face text, italics,
+headings in different fonts, and so on), and will (if you really must)
+allow you to embed arbitrary PostScript in your output.
+
+                                 - * -
+
+You are free to use and distribute this file in any way you please;
+you are NOT free to modify it. If you have an improvement to suggest,
+please let me know; I'm generally helpful.
+
+Copyright for the program remains with me, Gareth McCaughan.
+
+                                 - * -
+
+There is extensive documentation in the file "Docs" in this directory,
+and there's a summary in the file "Summary". For those in a real hurry,
+here's a summary of the summary.
+
+Simplest use:
+  3col some-text | lpr
+
+Slightly more advanced:
+  3col -title 'A page of text' some-text | lpr
+  3col first-file second-file > output.ps
+  3col -size 6 -title 'This is in 6-point type' blah | lpr -h
+  nroff -man trn | 3col -title 'trn manpage' | lpr -h
+
+There are *plenty* more options you can give.
+
+                                 - * -
+
+You might also want to look at the "manprint" program, included with
+this release of 3col. It uses 3col to print out manpages with a bit
+of nice (but straightforward) formatting. It requires Perl 5.
+
+And if you have Perl 5, you might also want to look at "pod-3col.pl",
+which sort-of converts the Perl 5 "pod" documentation format into
+input for "3col -format". It's very flaky, but I have found it
+useful.
+
+                                 - * -
+
+OK, that'll do for now. Enjoy.
+
+        Gareth McCaughan
+        gjm11@pmms.cam.ac.uk

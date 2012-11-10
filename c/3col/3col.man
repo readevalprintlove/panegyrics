@@ -1,0 +1,32 @@
+.\" @(#)rm.1 1.20 90/02/15 SMI; from UCB 4.1
+.TH 3COL 1 "11 September 1996"
+.SH NAME
+3col \- convert text to PostScript
+.SH SYNOPSIS
+.B 3col
+.RB [ options ]
+.IR filename \&.\|.\|.
+.SH DESCRIPTION
+.LP
+.B 3col
+is a program for turning plain text into PostScript for printing on
+PostScript printers. It is extremely versatile. By default it produces
+output suitable for A4 paper in landscape orientation, with three
+columns per page, in 6-point Courier type slightly condensed; but
+all of these things can be changed.
+.LP
+There are too many options to list here; see the documentation files
+for more information. For a very brief description of a few common
+options, do
+.B 3col -h.
+.SH FILES
+.LP
+!SYSCONFIG! (system-wide config file)
+.br
+!USERCONFIG! (per-user config file)
+.br
+!DOCDIR!/README  (very brief description)
+.br
+!DOCDIR!/Docs    (detailed documentation)
+.br
+!DOCDIR!/Summary (memory-jogging summary)

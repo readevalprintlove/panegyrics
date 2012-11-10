@@ -1,0 +1,394 @@
+-- Documentation for 3col, version 2.07 (17th October 1996) --
+
+This is a distribution of a program called "3col"; its purpose is
+to convert text to PostScript, with particular emphasis on being
+able to pack a lot of text onto each page.
+
+If that's not what you wanted, perhaps you downloaded the wrong file. :-)
+
+In slightly more detail: By default, 3col produces output for A4 paper
+in landscape orientation, consisting of 3 columns of 100 93-character
+lines each, in 5-point Courier condensed to 90% of its default width.
+
+But if you'd prefer output for "legal" paper in portrait orientation,
+in two columns of whatever width that produces when you print in 4.8-point
+<some other monospaced font>, expanded to 112% of its default width, with
+line numbers in the margin every 20 lines, wider separating lines between
+the columns, and slightly wider line spacing, you can have it. You can
+even make that the standard for all users at your site without having to
+recompile.
+
+3col also has facilities for some basic markup (bold-face text, italics,
+headings in different fonts, and so on), and will (if you really must)
+allow you to embed arbitrary PostScript in your output.
+
+3col's output is DSC-compliant PostScript, and is both compact and easily
+human-readable.
+
+"OK, enough hype."
+
+                                 - * -
+
+To invoke "3col", you type something like
+  3col [options] [input files] > [output file]
+or, if you have pipes,
+  3col [options] [input files] | lpr -blah -wibble
+or something of the kind.
+
+There are many, many options available. They fall into three classes:
+ones that can only be used as command-line options, ones that can only
+go into configuration files (more on these in a moment), and (the largest
+class) ones that can be used in either context.
+
+What follows is a pretty detailed description of what 3col can do
+and how to make it do it: if you just want to get started quickly,
+have a look at the examples in the README file; if you've used 3col
+before and just want a summary of its options etc, have a look at
+the "Summary" file.
+
+                                 - * -
+
+Configuration files
+-------------------
+
+Different sites have different printers, different sizes of paper,
+different just about everything else. Different users have different
+preferences too.
+
+So, when 3col starts up, the first thing it does is to read two
+configuration files: first a system-wide one, and then one that
+belongs to the individual user. (If either of these doesn't exist,
+it just doesn't bother. You don't *need* to use configuration
+files if you don't want them.)
+
+Here's (part of) a sample config file, indented by four spaces for clarity:
+
+    # Config file for machines at foo.bar.edu
+    # Because this line starts with a `#' it is ignored.
+
+    # Paper sizes:
+    # We use `Weird' (400 by 723 point) and `Unorthodox' (500 by 500) paper.
+    # We print on nasty printers that don't cope with anything within one
+    # inch (72 points) of the edge of the paper.
+    Paper-def: Weird 400 723 72 no
+    Paper_Def: Weird-Landscape 400 723 72 yes
+    Paper def: Unorthodox 500 500 72 no
+
+    # Unless specified to the contrary, we use `Weird' paper in landscape
+    # orientation.
+    Paper: Weird-Landscape
+
+    # Fonts:
+    # We use our home-grown `Monospaced' font, with its bold and italic
+    # variants. It doesn't need condensing. The width of a character
+    # is 0.5 of the nominal size of the font.
+    Font: Monospaced Monospaced-Bold Monospaced-Italic Monospaced-BoldItalic\
+          100 0.5
+    # Some users may prefer the Wibble-Spong font, also monospaced.
+    # This one has an `oblique' rather than an `italic' variant.
+    # If you don't condense this one, its characters are 0.6w wide;
+    # it looks better if condensed slightly.
+    Font: Wibble-Spong Wibble-Spong-Bold Wibble-Spong-Oblique \
+          Wibble-Spong-BoldOblique 90 0.6
+
+    # and so on.
+
+Each line consists of a keyword, followed by a colon, followed by
+some number of bits of information separated by whitespace. In the
+keyword, case distinctions are ignored and the characters '_', '-', ' '
+are considered equivalent.
+
+Lines in a config file can be strung together by ending a line with
+'\' (followed by whitespace, if you like). The '\' is turned into
+a single space character.
+
+The default places for the global and user configuration files are
+compiled into the program; you can change them by setting environment
+variables 3COL_GLOBAL_CONFIG and 3COL_LOCAL_CONFIG.
+
+If the program is compiled without altering the Makefile, the global
+config file is looked for at /usr/lib/3col-config and the user's
+config file at ~/.3col-config. If you're not using a Unix system,
+different locations would be advisable.
+
+                                 - * -
+
+Command-line options
+--------------------
+
+Most of the options that can go in a configuration file can also go
+on the command line. However, you indicate them in a slightly different
+way:
+
+    3col -paper-def Unorthodox 500 500 72 no -paper A4-portrait ...
+
+-- i.e., without the colon and with a leading '-'.
+
+                                 - * -
+
+The options
+-----------
+
+Without further ado, here are all the options available. Unless otherwise
+stated they can be used either in config files or on the command line.
+
+*** Describing the paper you're using. ***
+  Paper_def <name> <x-size> <y-size> <margin> <rotated?>
+  Paper     <name>
+  XSize     <x-size>
+  YSize     <y-size>
+  Margin    <margin>
+
+Here <margin> indicates the *minimum* width of the blank strip around
+the edge of the paper. The point is that most printers have a usable
+area that doesn't extend right to the edges. Provided your other parameters
+are suitably chosen, changing <margin> makes no difference at all; but if
+they aren't suitable, they will be adjusted to fit the limitations of
+your printer.
+
+<rotated?> is "yes" or "no", depending on whether the output needs to
+be rotated in order to make it the right size for the paper. It should
+probably be "yes" if you're using the paper in landscape orientation,
+and "no" if you're using it in portrait orientation.
+
+All dimensions are in points. A point is 1/72 of an inch. (Traditionally,
+a point is 1/72.27 of an inch, but PostScript points are a bit bigger.)
+
+*** Describing the fonts to use. ***
+  Font_def <normal> <bold> <italic> <bold-italic> <aspect> <width>
+  Font     <name>
+  Size     <nominal-size>
+  Condense <aspect>
+  Leading  <leading>
+  ISO-Latin-1 <yes-or-no>
+  Latin1                       ON THE COMMAND LINE
+
+The first four items in a Font_Def are the (PostScript) names of the
+font to use for ordinary text and its various variants. (The variants
+are used when mark-up is being done -- see later.) The <normal> name
+of the font is used to refer to the font later: so you might say
+  Font: Courier
+or something of the sort.
+
+Any fonts you use for normal text must be monospaced (unless you don't
+mind tabs and underlining producing stupid results), and if you're ever
+going to use the mark-up features the bold, italic and bold italic
+variants must have characters of the same width (unless, etc).
+
+The aspect ratio <aspect> is given as a percentage, and really isn't
+exactly an aspect ratio. The font will be condensed (or extended) to
+<aspect>/100 of its normal width.
+
+<width> is the width of one character in the font, as a fraction of
+the nominal size. For instance, 5-point Courier type has characters
+3 points wide, so <width> is 0.6. This is *before* any condensing is
+done: if you change <aspect> you do not therefore need to change <width>.
+
+<leading> isn't really a parameter of the font as such, but it seems
+to belong here. A <leading> of 1 means that the spacing between lines
+equals the design size of the font; this is usually about right.
+You can make lines closer together or further apart by decreasing
+or increasing <leading>.
+
+If you request `ISO-Latin-1' (i.e., either put `ISO-Latin-1 yes' in
+a config file, or invoke with `-ISO-Latin-1 yes' or `-latin1' for
+short) then the encoding used for all fonts in the document will
+put the characters from the ISO Latin-1 (ISO-8859-1) character set
+into their appointed places. I do not guarantee that this will work,
+but it does work on the PostScript devices to which I have access.
+
+*** Placement of columns. ***
+  Columns <n>
+  MGap    <mgap>
+  CGap    <cgap>
+
+The gaps around the edge of the text are all <mgap> in size. There are
+*two* such gaps at the top of the page: one above the title bar, and
+one between the title bar and the text.
+
+Adjacent columns are <cgap> apart, and there is a vertical
+dividing line down the middle of this gap.
+
+  Divider_width <width>
+  Divider_grey  <value>
+
+These dividing lines are <width> points wide. The <value> indicates
+how dark they are: 0 means black (the default), and 1 means white
+(which generally means that they are invisible).
+
+*** The title bar. ***
+  Title_height <height>
+  Title_grey   <value>
+  Title_rule   <width>
+  Title_font   <font>
+  Title        <title>         ON THE COMMAND LINE
+
+The title bar is <height> points high, and extends right across the page
+(apart from margins of size <mgap> at left and right, of course.) Its
+background is grey; the exact grey is determined by <value> as for the
+column-dividing lines (see above); by default <value> is 0.8. The
+PostScript name of the font to use is <font>; this defaults to
+"Helvetica-Bold". The *size* of this font is determined by the height
+of the title bar.
+
+If you don't specify on the command line what title you want,
+the name of the input file is used. (If there are several input
+files, you get something like "foo.c and 1 other file".)
+
+*** Date and time. ***
+  Date         <yes-or-no>
+  Date_format  <format-string>
+  Date_font    <font> <size>
+
+By default, 3col will put a little note saying when it was invoked
+just under the right-hand end of the title bar. You can determine
+whether or not this happens with the "Date" option; you can change
+the font (by default, 9-point Times Roman) it uses with "Date_font";
+and you can change what it actually displays using "Date_format".
+
+This last one is pretty hairy. The <format-string> should be suitable
+for feeding to the C library function strftime(). What this does is
+to copy the string verbatim, except that certain magic sequences of
+characters are replaced with bits of the date or time. The most useful
+ones are exhibited in the examples below:
+  Printed on %a, %d %b %Y.  -->  Printed on Wed, 01 Oct 1997
+  %A %d/%m/%y (%B)          -->  Wednesday 01/10/97 (October)
+  %H:%M:%S = %h:%m %p       -->  23:45:01 = 11:45 pm
+
+*** Line numbers. ***
+  Line_numbers <yes-or-no>
+  LN_interval  <interval>
+  LN_ctsly     <yes-or-no>
+  LN_font      <font> <size>
+  Number       <interval>      ON THE COMMAND LINE
+
+You can make 3col display line numbers in the margin. By default
+it doesn't. If it *does*, by default it numbers every 10th line;
+you can change the interval with `LN_interval'.
+
+If you're printing several files, you might or might not want
+line numbers to restart at the start of each file. If you don't,
+say "-ln_ctsly yes" (or put the equivalent in your config file).
+
+The default font used is 4-point Times Italic.
+
+Since this is a bit cumbersome, on the command line you can just
+say "-number 20" to get the same effect as "-line_numbers yes -ln_interval 20".
+
+*** Multiple files. ***
+  New_file          <action>
+  New_file_title    <yes-or-no>
+  New_file_font     <font> <size>
+  New_file_skip     <n>
+
+If you have several input files, what should 3col do between files?
+
+It could just string them together; it could put a blank line between
+them; it could start each new file at the start of a new column; it
+could start each new file at the start of a new page. (There are
+plenty of other things you could imagine, but they aren't options
+yet.) To select one of these, make <action> be one of: "Ignore",
+"As_newline", "New_column" or "New_page".
+
+You also might or might not want each file preceded by a heading
+saying what its name is. If you do want that, say "yes" to
+`New_file_title'. By default, this results in titles in 9-point
+Times Bold, with 3 lines being allowed for the title; you can
+change these in the obvious way.
+
+*** Everything else. ***
+   Tab_width    <n>
+   Truncate     <yes-or-no>    IN A CONFIG FILE
+   Truncate                    ON THE COMMAND LINE
+   NoTruncate                  ON THE COMMAND LINE
+   Form_feed    <action>
+   Page_numbers <maybe>
+   Mark_up      <yes-or-no>
+   Format                      ON THE COMMAND LINE
+   NoFormat                    ON THE COMMAND LINE   
+
+By default, a tab character tabs to the next column whose number
+is a multiple of 8. (The leftmost column is number 0). You can
+replace the number 8 by a different value with "Tab_width".
+If you give a value less than 1, the result is the same as if
+you'd given 1: tabs are treated just like spaces.
+
+By default, input lines too long to fit on a single output line are
+wrapped, and a double vertical bar is put in the left-hand margin to
+indicate that this has happened. If you say "yes" to `truncate',
+they are truncated and a double vertical bar is put in the
+right-hand margin instead.
+
+When a form-feed character (ctrl-L, ASCII 12) is seen, it's not clear
+what the right way to deal with it is. You can give the same options
+here as for `New_file' above.
+
+By default, each page has something like `12 of 200' at the right-hand
+end of its title bar. Working out the number of pages requires 3col
+to do two passes through the input files; also, displaying page numbers
+at all may not be desirable if you need the full width of the title bar
+or if you often print out single-page things. <maybe> can be one of
+"No" (none at all), "Yes" (page numbers but not total number of pages)
+or "NofM" (the default).
+
+By default 3col just prints out all the characters you give it.
+If you say "yes" to `Mark_up', though, it behaves slightly differently:
+more on this shortly. For historical reasons, you can also say
+"-format" or "-noformat" on the command line.
+
+                                 - * -
+
+Mark-up
+-------
+
+If plain text isn't quite enough, but things like TeX are a bit too
+heavyweight (or not easy to coax into producing multi-column output),
+then 3col's mark-up facilities are for you. Just say "-format" on
+the command line, and suddenly '%' characters in your input file
+start doing magical things:
+
+  %%
+    is just a percent sign -- you might need one, after all
+  %B, %I, %U
+    toggle boldness, italics and underlining (these can be combined)
+  %T <font> <size> <skip>
+    outputs the *following* line in the font whose PostScript name
+    is <font>, at size <size>; it allows <skip> lines' worth of space
+    for it. ('T' is for "title".)
+  %C, %R
+    do the same, but (C)entre or (R)ight-justify the text.
+  %t, %c, %r
+    are like %T, %C, %R, but take two additional parameters:
+    %c 10 50 Times-Italic 10 3
+    will centre the following line not in the whole column, but
+    in that portion of it between columns 10 (inclusive) and
+    50 (exclusive). Similarly for %t, %r.
+  %N <n>
+    starts a new column if there are fewer than <n> lines left
+    in the present one. Incidentally, %T etc do this too.
+  %H <left> <right> <width>
+    produces a horizontal rule of width <width>. It extends across
+    the partial column specified by <left>,<right> (as for %t etc
+    above).
+  %P <n>
+    begins an embedded PostScript object. Everything that follows, up to
+    the next blank line, will be copied directly into the output file,
+    bracketed by "gsave" and "grestore". <n> lines' worth of space
+    are reserved for it; if <n> is 0, the text that follows will be
+    treated as if it had come just after the character before the "%P".
+    (Got that?)
+
+If you want really clever effects, you should use TeX or something
+instead; but I have found that these facilities do a very good job
+on things like manual pages, RFCs and so on; generally a little
+Perl script that guesses what is a heading and so on, followed by
+a few minutes' hand-tweaking, produce a file that prints out very
+nicely.
+
+                                 - * -
+
+That's about it, I think. I've probably made the whole thing seem much
+harder than it really is; for which, my apologies.
+
+        Gareth McCaughan
+        gjm11@pmms.cam.ac.uk
